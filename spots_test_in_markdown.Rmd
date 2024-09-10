@@ -1,7 +1,6 @@
 ---
 title: "Test spot analysis"
 output:
-  word_document: default
   html_document:
     code_folding: show
     theme:
@@ -13,6 +12,7 @@ output:
         google: Prompt
       heading_font:
         google: Proza Libre
+  word_document: default
   pdf_document: default
 ---
 
@@ -95,13 +95,30 @@ print (P1_clean)
 
 ## Average triplicate wells
 ```{r eval=FALSE}
-P1_average <- pivot_longer(P1_clean, cols = starts_with("M"), names_to = "replicates", values_to = "counts") |> # Concatenate columns (1:12) into one column (replicates)
-  mutate(group = gsub(pattern = "\\_r[1|2|3]", replacement = "", x = replicates)) |> # Search headers for xxx_r1, xxx_r2 etc, substitute with ?
+P1_average <- pivot_longer(P1_clean, cols = starts_with("M"), names_to = "replicates", values_to = "counts") |> # Convert dataframe into "Tall format" by concatenating columns (MouseX_rX) into one column (replicates)
+  mutate(group = gsub(pattern = "\\_r[1|2|3]", replacement = "", x = replicates)) |> # Search/match headers for the characters/pattern xxx_r1 etc, substitute/replace with nothing "" (ie. Mouse1). Search within "replicates"
   group_by(Plate_rows, group) |> mutate(avg = mean(counts)) |> 
   distinct(Plate_rows,group,avg) |> 
   pivot_wider(id_cols = Plate_rows, names_from = group, values_from = avg) |> as.data.frame()
 ```
 
+<br>
 
+## Subtract background
 
+The purpose of this step is to subtract "Media only" spot counts from Peptide and ConA stimulation wells, and to subtract A20-empty_vector counts from A20-CSP wells. The stimulants correspond to the following Plate_rows:
 
+```{r, eval=FALSE}
+A = Media only
+B = Peptide (57-70)
+C = Peptide (58-67)
+D = Peptide (280-288)
+E = Peptide (280-295)
+F = A20 (EV)
+G = A20
+H = ConA
+```
+
+```{r, eval=FALSE}
+P1_subtracted <- 
+```
