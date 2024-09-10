@@ -1,0 +1,104 @@
+---
+title: "Test spot analysis"
+output: 
+  html_document:
+    code_folding: show
+    theme:
+      bg: "#202123"
+      fg: "#B8BCC2"
+      primary: "#EA80FC"
+      secondary: "#00DAC6"
+      base_font:
+        google: Prompt
+      heading_font:
+        google: Proza Libre
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (requireNamespace("thematic")) 
+  thematic::thematic_rmd(font = "auto")
+```
+
+
+```{r klippy, echo=FALSE, include=TRUE}
+klippy::klippy(
+  position = c('top', 'right'),
+  color = "auto",
+  tooltip_message = "Copy code",
+  tooltip_success = "Copied!"
+)
+```
+
+<br>
+
+## R workflow for spot analysis
+
+This workflow is designed to take raw Spot output (.csv file) and automatically perform:
+
+```{r, eval=FALSE}
+- Import csv file
+- Extraneous row deletion
+- Tripicate averaging
+- Background subtraction
+- Statistics (one-way ANOVA with post-hoc test)
+- Data visualisation
+```
+---
+
+## Install Packages
+
+```{r, eval=FALSE}
+install.packages("dplyr")
+install.packages("tidyverse")
+```
+
+### Load Libraries
+
+```{r, eval=FALSE}
+library(dplyr)
+library(tidyverse)
+```
+<br>
+
+## Set the Working Directory
+
+```{r, eval=FALSE}
+setwd("/Volumes/DOOLAN_Research_Team-A13379/IMB team/LAB MEMBERS/JONATHAN TAN/Projects/ANOVA_tutorial/ANOVA_tutorial")
+```
+
+### Add any extra directories
+
+```{r, eval=FALSE}
+dir.create("plots")
+dir.create("data")
+```
+<br>
+
+## Import csv
+```{r eval=FALSE}
+read.csv("Data/P1_spots.csv", header = FALSE) # header = FALSE is included to avoid the error: more columns than column names
+P1<-read.csv("Data/P1_spots.csv", header = FALSE) # Create a new variable (P1) and save the contents of the .csv file into that variable
+```
+
+## Remove extraneous rows (subsetting)
+```{r eval=FALSE}
+P1_clean <- slice(P1, -c(1:5)) # Remove (slice) rows 1-5
+colnames(P1_clean) <- c("Plate_rows", "Mouse1_r1","Mouse1_r2","Mouse1_r3","Mouse2_r1","Mouse2_r2","Mouse2_r3","Mouse3_r1","Mouse3_r2","Mouse3_r3","Mouse4_r1","Mouse4_r2","Mouse4_r3") # Change to meaningful header names (r1 = replicate 1)
+print (P1_clean)
+# write.csv(P1_clean, "Data/P1_clean.csv")
+```
+<br>
+
+## Average triplicate wells
+```{r eval=FALSE}
+P1_average <- pivot_longer(P1_clean, cols = starts_with("M"), names_to = "replicates", values_to = "counts") |> # Concatenate columns (1:12) into one column (replicates)
+  mutate(group = gsub(pattern = "\\_r[1|2|3]", replacement = "", x = replicates)) |> # Search headers for xxx_r1, xxx_r2 etc, substitute with ?
+  group_by(Plate_rows, group) |> mutate(avg = mean(counts)) |> 
+  distinct(Plate_rows,group,avg) |> 
+  pivot_wider(id_cols = Plate_rows, names_from = group, values_from = avg) |> as.data.frame()
+```
+
+
+
+
