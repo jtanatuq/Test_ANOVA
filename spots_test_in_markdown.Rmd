@@ -57,7 +57,7 @@ install.packages("tidyverse")
 
 ### Load Libraries
 
-```{r, eval=FALSE}
+```{r, message=FALSE, results='hide'}
 library(dplyr)
 library(tidyverse)
 ```
@@ -78,28 +78,29 @@ dir.create("data")
 <br>
 
 ## Import csv
-```{r eval=FALSE}
-read.csv("Data/P1_spots.csv", header = FALSE) # header = FALSE is included to avoid the error: more columns than column names
-P1<-read.csv("Data/P1_spots.csv", header = FALSE) # Create a new variable (P1) and save the contents of the .csv file into that variable
+```{r, message=FALSE}
+read.csv("Data/P6_spots.csv", header = FALSE) # header = FALSE is included to avoid the error: more columns than column names
+P6<-read.csv("Data/P6_spots.csv", header = FALSE) # Create a new variable (P6) and save the contents of the .csv file into that variable
 ```
 <br>
 
 ## Remove extraneous rows (subsetting)
-```{r eval=FALSE}
-P1_clean <- slice(P1, -c(1:5)) # Remove (slice) rows 1-5
-colnames(P1_clean) <- c("Plate_rows", "Mouse1_r1","Mouse1_r2","Mouse1_r3","Mouse2_r1","Mouse2_r2","Mouse2_r3","Mouse3_r1","Mouse3_r2","Mouse3_r3","Mouse4_r1","Mouse4_r2","Mouse4_r3") # Change to meaningful header names (r1 = replicate 1)
-print (P1_clean)
-# write.csv(P1_clean, "Data/P1_clean.csv")
+```{r, message=FALSE}
+P6_clean <- slice(P6, -c(1:4)) # Remove (slice) rows 1-4
+colnames(P6_clean) <- c("Plate_rows", "Mouse1_r1","Mouse1_r2","Mouse1_r3","Mouse2_r1","Mouse2_r2","Mouse2_r3","Mouse3_r1","Mouse3_r2","Mouse3_r3","Mouse4_r1","Mouse4_r2","Mouse4_r3") # Change to meaningful header names (r1 = replicate 1)
+print (P6_clean)
+# write.csv(P6_clean, "Data/P6_clean.csv")
 ```
 <br>
 
 ## Average triplicate wells
-```{r eval=FALSE}
-P1_average <- pivot_longer(P1_clean, cols = starts_with("M"), names_to = "replicates", values_to = "counts") |> # Convert dataframe into "Tall format" by concatenating columns (MouseX_rX) into one column (replicates)
+```{r, message=FALSE}
+P6_average <- pivot_longer(P6_clean, cols = starts_with("M"), names_to = "replicates", values_to = "counts") |> # Convert dataframe into "Tall format" by concatenating columns (MouseX_rX) into one column (replicates)
   mutate(group = gsub(pattern = "\\_r[1|2|3]", replacement = "", x = replicates)) |> # Search/match headers for the characters/pattern xxx_r1 etc, substitute/replace with nothing "" (ie. Mouse1). Search within "replicates"
   group_by(Plate_rows, group) |> mutate(avg = mean(counts)) |> 
   distinct(Plate_rows,group,avg) |> 
   pivot_wider(id_cols = Plate_rows, names_from = group, values_from = avg) |> as.data.frame()
+print (P6_average)
 ```
 
 <br>
@@ -107,18 +108,32 @@ P1_average <- pivot_longer(P1_clean, cols = starts_with("M"), names_to = "replic
 ## Subtract background
 
 The purpose of this step is to subtract "Media only" spot counts from Peptide and ConA stimulation wells, and to subtract A20-empty_vector counts from A20-CSP wells. The stimulants correspond to the following Plate_rows:
-
 ```{r, eval=FALSE}
-A = Media only
-B = Peptide (57-70)
-C = Peptide (58-67)
-D = Peptide (280-288)
-E = Peptide (280-295)
-F = A20 (EV)
-G = A20
-H = ConA
+A(1) = Media only
+B(2) = Peptide (57-70)
+C(3) = Peptide (58-67)
+D(4) = Peptide (280-288)
+E(5) = Peptide (280-295)
+F(6) = A20 (EV)
+G(7) = A20 (CSP)
+H(8) = ConA
 ```
 
-```{r, eval=FALSE}
-P1_subtracted <- 
+We will start by selecting the rows we are subtracting from (eg. Peptides and ConA corresponding to rows [2:5, 8]), creating another dataframe with "Media only" data (row 1, replicated 5 times), then subtracting one df from the other.
+```{r, message=FALSE}
+P6_peptide <- P6_average[c(2:5, 8), -1]- P6_average[rep(1,5),-1] # remove first column (-1)
+print (P6_peptide)
 ```
+
+Repeat this for A20 subtraction:
+```{r, message=FALSE}
+P6_A20 <- P6_average[7, -1]- P6_average[6, -1] # remove first column (-1)
+print (P6_A20)
+```
+
+And merge the dataframes together!
+```{r, message=FALSE}
+P6_subtracted <- rbind(P6_peptide, P6_A20)
+print (P6_subtracted)
+```
+
