@@ -23,7 +23,7 @@ if (requireNamespace("thematic"))
 ```
 
 
-```{r klippy, echo=FALSE, include=TRUE}
+```{r klippy, echo=FALSE, message=FALSE, include=TRUE}
 klippy::klippy(
   position = c('top', 'right'),
   color = "auto",
@@ -38,7 +38,7 @@ klippy::klippy(
 
 This workflow is designed to take raw Spot output (.csv file) and automatically perform:
 
-```{r, eval=FALSE}
+```{r workflow, eval=FALSE}
 √ Import csv file
 √ Extraneous row deletion
 √ Tripicate averaging
@@ -50,14 +50,14 @@ This workflow is designed to take raw Spot output (.csv file) and automatically 
 
 ## Install Packages
 
-```{r, eval=FALSE}
-install.packages("dplyr")
-install.packages("tidyverse")
+```{r packages, eval=FALSE}
+# install.packages("dplyr")
+# install.packages("tidyverse")
 ```
 
 ### Load Libraries
 
-```{r, message=FALSE, results='hide'}
+```{r libraries, message=FALSE, results='hide'}
 library(dplyr)
 library(tidyverse)
 ```
@@ -65,27 +65,27 @@ library(tidyverse)
 
 ## Set the Working Directory
 
-```{r, eval=FALSE}
-setwd("/Volumes/DOOLAN_Research_Team-A13379/IMB team/LAB MEMBERS/JONATHAN TAN/Projects/ANOVA_tutorial/ANOVA_tutorial")
+```{r working directory, eval=FALSE}
+# setwd("/Volumes/DOOLAN_Research_Team-A13379/IMB team/LAB MEMBERS/JONATHAN TAN/Projects/ANOVA_tutorial/ANOVA_tutorial")
 ```
 
 ### Add any extra directories
 
-```{r, eval=FALSE}
-dir.create("plots")
-dir.create("data")
+```{r create directories, eval=FALSE}
+# dir.create("plots")
+# dir.create("data")
 ```
 <br>
 
 ## Import csv
-```{r, message=FALSE}
+```{r import, message=FALSE}
 read.csv("Data/P6_spots.csv", header = FALSE) # header = FALSE is included to avoid the error: more columns than column names
 P6<-read.csv("Data/P6_spots.csv", header = FALSE) # Create a new variable (P6) and save the contents of the .csv file into that variable
 ```
 <br>
 
 ## Remove extraneous rows (subsetting)
-```{r, message=FALSE}
+```{r subsetting, message=FALSE}
 P6_clean <- slice(P6, -c(1:4)) # Remove (slice) rows 1-4
 colnames(P6_clean) <- c("Plate_rows", "Mouse1_r1","Mouse1_r2","Mouse1_r3","Mouse2_r1","Mouse2_r2","Mouse2_r3","Mouse3_r1","Mouse3_r2","Mouse3_r3","Mouse4_r1","Mouse4_r2","Mouse4_r3") # Change to meaningful header names (r1 = replicate 1)
 print (P6_clean)
@@ -94,7 +94,7 @@ print (P6_clean)
 <br>
 
 ## Average triplicate wells
-```{r, message=FALSE}
+```{r averaging, message=FALSE}
 P6_average <- pivot_longer(P6_clean, cols = starts_with("M"), names_to = "replicates", values_to = "counts") |> # Convert dataframe into "Tall format" by concatenating columns (MouseX_rX) into one column (replicates)
   mutate(group = gsub(pattern = "\\_r[1|2|3]", replacement = "", x = replicates)) |> # Search/match headers for the characters/pattern xxx_r1 etc, substitute/replace with nothing "" (ie. Mouse1). Search within "replicates"
   group_by(Plate_rows, group) |> mutate(avg = mean(counts)) |> 
@@ -108,7 +108,7 @@ print (P6_average)
 ## Subtract background
 
 The purpose of this step is to subtract "Media only" spot counts from Peptide and ConA stimulation wells, and to subtract A20-empty_vector counts from A20-CSP wells. The stimulants correspond to the following Plate_rows:
-```{r, eval=FALSE}
+```{r row list, eval=FALSE}
 A(1) = Media only
 B(2) = Peptide (57-70)
 C(3) = Peptide (58-67)
@@ -120,19 +120,19 @@ H(8) = ConA
 ```
 
 We will start by selecting the rows we are subtracting from (eg. Peptides and ConA corresponding to rows [2:5, 8]), creating another dataframe with "Media only" data (row 1, replicated 5 times), then subtracting one df from the other.
-```{r, message=FALSE}
+```{r subtract background, message=FALSE}
 P6_peptide <- P6_average[c(2:5, 8), -1]- P6_average[rep(1,5),-1] # remove first column (-1)
 print (P6_peptide)
 ```
 
 Repeat this for A20 subtraction:
-```{r, message=FALSE}
+```{r subtract background, message=FALSE}
 P6_A20 <- P6_average[7, -1]- P6_average[6, -1] # remove first column (-1)
 print (P6_A20)
 ```
 
 And merge the dataframes together!
-```{r, message=FALSE}
+```{r merge dataframes, message=FALSE}
 P6_subtracted <- rbind(P6_peptide, P6_A20)
 print (P6_subtracted)
 ```
